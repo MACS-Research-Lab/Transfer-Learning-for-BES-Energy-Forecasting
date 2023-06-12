@@ -1,3 +1,13 @@
+# additions
+models_saved/
+data/
+temp/
+*temp*.*
+*tmp*.*
+data_descriptions.txt
+.empty/
+models/*winter*.ipynb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
