@@ -97,9 +97,22 @@ _Ideas or Plan_
 
 - [x] Modify esb1-lstm-model to use new preprocessed ESB data
 - [x] Use ESB1_summer_lstm_model trained on ESB cooling tower 1 on ESB cooling tower 2 (without any retraining)
-- [ ] Change lstm preprocessing method of handling off data
+- [x] Learn how to make interactive plots
+
+**_:calendar: Tue, Jun 13_**
 
 _Ideas or Plan_
 
-- [ ] Follow transfer learning procedures to use ESB1_summer_lstm_model-lstm-model on ESB cooling tower 2
-- [ ] Use wet bulb temperature equation by Roland Stull to improve data imputation techniques
+- [x] Change lstm preprocessing method of handling off data
+- [x] Reverse normalize predicted data
+- [x] Clean up ESB Summer LSTM preprocessing
+
+> **Disclaimer**:<br/>
+> Timesteps jumps have been appropriately removed while handling cases where data was removed due to the cooling tower being off, but not in cases of data removal due to outliers/missing data.<br/>
+> Since outliers and missing data for ESB were previously removed in the esb_preprocessing file, timestep jumps due to these will only constitute a very small portion of the data (since outliers and missing data constituted <0.1% of all the data), so I have not changed my outlier and missing data handling methods.<br/>
+
+**_:calendar: Wed, Jun 14_**
+
+- [x] Preprocess Kissam data
+- [x] Create LSTM for Kissam tower 1
+- [x] Use model of Kissam tower 1 on tower 2 without additional training

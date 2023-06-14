@@ -2,8 +2,7 @@
 
 - **Spring 2023 Works:** [ESB Tower 1 Time-Series Model for Cooling Tower Efficiency](./archive/) made using sklearn (later added a model made using LSTM with keras in the summer)
 - **Summer 2023 Works:** Transfer learning model for energy performance analysis
-
-<br/>
+  <br/>
 
 # Transfer learning of data-driven models for energy performance analysis
 
