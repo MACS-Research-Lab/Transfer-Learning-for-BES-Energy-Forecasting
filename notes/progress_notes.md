@@ -116,3 +116,24 @@ _Ideas or Plan_
 - [x] Preprocess Kissam data
 - [x] Create LSTM for Kissam tower 1
 - [x] Use model of Kissam tower 1 on tower 2 without additional training
+
+**_:calendar: Thu, Jun 15_**
+
+- [x] Generalize model creation process
+- [x] Replicate LSTM for all Kissam & ESB towers
+
+**_:calendar: Fri, Jun 16_**
+
+- [x] Improve presentation of results
+- [ ] Go through faulty results in replicated LSTM
+
+## **Week 4**
+
+**_:calendar: Mon, Jun 19_**
+
+- [x] Comparison & correlation analysis of ESB/Kissam variables
+- [x] Transfer ESB summer onto Kissam summer and vice versa
+
+> **Better preprocessing points**:<br/>
+> Handle zero temperatures as missing data<br/>
+> Make sure that during model transfers, order of columns is the same.<br/>

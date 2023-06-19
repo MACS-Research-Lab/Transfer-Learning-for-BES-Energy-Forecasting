@@ -174,7 +174,7 @@ def get_correlation_info(df1: pd.DataFrame, df2: pd.DataFrame):
     """
     correlations = (
         df1.select_dtypes(include=[int, float])
-        .merge(df2.select_dtypes(include=[int, float]), on="Date / Time")
+        .merge(df2.select_dtypes(include=[int, float]), on=df1.index)
         .corr()
     )
     correlations.drop(

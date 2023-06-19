@@ -13,8 +13,8 @@ class NormalizationHandler(object):
     def normalize(self, dtframe: pd.DataFrame, target_col: str):
         self.min_actual = np.min(dtframe[target_col])
         self.max_actual = np.max(dtframe[target_col])
-        print(f"Min = {self.min_actual}")
-        print(f"Max = {self.max_actual}")
+        print(f"Mininimum {target_col} = {self.min_actual}")
+        print(f"Maximum {target_col} = {self.max_actual}")
 
         scaled_df = pd.DataFrame(
             self.scaler.fit_transform(dtframe.values.astype("float32")),
@@ -104,7 +104,7 @@ def df_to_3d(lstm_dtframe, num_columns, step_back):
     return vec
 
 
-def create_timesteps(df, target_names, n_in=1, n_out=1):
+def create_timesteps(df, target_name, n_in=1, n_out=1):
     """
     Frame a time series as a supervised learning dataset.
     Arguments:
@@ -126,18 +126,18 @@ def create_timesteps(df, target_names, n_in=1, n_out=1):
 
     # forecast sequence (t, t+1, ... t+n)
     for i in range(0, n_out):
-        cols.append(df[target_names].shift(-i))
+        cols.append(df[target_name].shift(-i))
         if i == 0:
             names += [
                 (f"{df.columns[j]}(t)")
                 for j in range(n_vars)
-                if df.columns[j] in target_names
+                if df.columns[j] == target_name
             ]
         else:
             names += [
                 (f"{df.columns[j]}(t+{i})")
                 for j in range(n_vars)
-                if df.columns[j] in target_names
+                if df.columns[j] == target_name
             ]
 
     # put it all together
