@@ -32,6 +32,14 @@ def remove_missing_data(
         datadf = datadf[[col for col in datadf.columns if "generated" not in col]]
     # remove all columns that are completely empty
     datadf = datadf.dropna(axis=1, how="all")
+    enteringWaterTemp_col = datadf.columns[
+        datadf.columns.str.contains("enteringWaterTemp")
+    ].tolist()[0]
+    leavingWaterTemp_col = datadf.columns[
+        datadf.columns.str.contains("leavingWaterTemp")
+    ].tolist()[0]
+    datadf = datadf[~(datadf[enteringWaterTemp_col] == 0)]
+    datadf = datadf[~(datadf[leavingWaterTemp_col] == 0)]
 
     # percentages of missing data in each column:
     missing_info = datadf.isna().sum() / datadf.shape[0]

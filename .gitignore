@@ -7,7 +7,6 @@ temp/
 data_descriptions.txt
 .empty/
 models/*winter*.ipynb
-models/all_lstm_models.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

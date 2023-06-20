@@ -30,7 +30,7 @@ def create_model(
     season: str,
     features: List[str],
     target: str,
-    save_timestepped: bool = False,
+    plot_history: bool = False,
 ):
     """
     1. Convert data into a model-compatible shape
@@ -73,13 +73,6 @@ def create_model(
     # remove cases where spring data would leak into summer data (i.e. intial timesteps)
     print("\nRemoving irrelevant data...")
     lstm_df = model_prep.remove_irrelevant_data(lstm_df, on_condition, step_back)
-
-    # save
-    print("\nSaving prepared dataframe...")
-    if save_timestepped:
-        lstm_df.to_csv(
-            f"../data/{building_name.lower()}/{building_name.lower()}{tower_number}_{season}_timestepped.csv"
-        )
 
     """
     2. Split data into training and testing sets
@@ -131,10 +124,11 @@ def create_model(
     )
 
     # plot history
-    print("\nPlotting history...")
-    plt.plot(history.history["loss"], label="train")
-    plt.legend()
-    plt.show()
+    if plot_history:
+        print("\nPlotting history...")
+        plt.plot(history.history["loss"], label="train")
+        plt.legend()
+        plt.show()
 
     print("\nMaking predictions...")
     yhat = model.predict(vec_X_test)
@@ -175,19 +169,20 @@ def create_model(
     )
     fig.show()
 
-    fig.write_html(f"../plots/{building_name.lower()}{tower_number}_{season}_lstm.html")
+    fig.write_html(
+        f"../plots/prepared_models/{building_name.lower()}{tower_number}_{season}_lstm.html"
+    )
     model.summary()
     model.save(f"../models_saved/{building_name.lower()}{tower_number}_{season}_lstm/")
 
 
-def intra_building_transfer_model(
+def intra_building_transfer(
     building_name: str,
     from_csv_path: str,
     tower_number: int,
     season: str,
     features: List[str],
     target: str,
-    save_timestepped: bool = False,
     retraining_percentage: float = 0,
 ):
     # load data
@@ -218,13 +213,6 @@ def intra_building_transfer_model(
 
     # remove cases where spring data would leak into summer data (i.e. intial timesteps)
     lstm_df = model_prep.remove_irrelevant_data(lstm_df, on_condition, step_back)
-
-    # save
-    print("\nSaving prepared dataframe...")
-    if save_timestepped:
-        lstm_df.to_csv(
-            f"../data/{building_name.lower()}/{building_name.lower()}{tower_number}_{season}_timestepped.csv"
-        )
 
     """
     2. Convert tower data into a model-compatible shape i.e. get timestepped data as a 3D vector
@@ -283,67 +271,59 @@ def intra_building_transfer_model(
     fig.show()
 
     fig.write_html(
-        f"../plots/{building_name.lower()}{3-tower_number}_to_{building_name.lower()}{tower_number}_{season}_lstm.html"
+        f"../plots/intrabuilding_transfers/{building_name.lower()}{3-tower_number}_to_{building_name.lower()}{tower_number}_{season}_lstm.html"
     )
 
 
-def inter_building_transfer_model(
+def inter_building_transfer(
     from_building_name: str,
     from_tower_number: int,
     to_building_name: str,
     to_tower_number: int,
-    season: str,
     to_features: List[str],
     to_target: str,
-    save_timestepped: bool = False,
+    season: str,
     retraining_percentage: float = 0,
 ):
     # load data
-    df = pd.read_csv(
-        f"../data/{to_building_name}/{to_building_name}_{to_tower_number}_preprocessed.csv",
+    to_df = pd.read_csv(
+        f"../data/{to_building_name.lower()}/{to_building_name.lower()}_tower_{to_tower_number}_preprocessed.csv",
         index_col="time",
     )
-    df.index = pd.to_datetime(df.index)
+    to_df.index = pd.to_datetime(to_df.index)
 
     # only take data for one season
-    df = model_prep.choose_season(
-        df,
+    to_df = model_prep.choose_season(
+        to_df,
         season=season,
         season_col_name=f"{to_building_name}_Tower_{to_tower_number} season",
     )
 
     # save a boolean series that specifies whether the cooling tower is on
-    on_condition = df[f"{to_building_name}_Tower_{to_tower_number} fanStatus"]
+    on_condition = to_df[f"{to_building_name}_Tower_{to_tower_number} fanStatus"]
 
     # select features and targets and create final dataframe that includes only relevant features and targets
-    df = df[to_features].join(df[to_target], on=df.index)
+    to_df = to_df[to_features].join(to_df[to_target], on=to_df.index)
 
     # normalize data
     scaler = model_prep.NormalizationHandler()
-    df = scaler.normalize(dtframe=df, target_col=to_target)
+    to_df = scaler.normalize(dtframe=to_df, target_col=to_target)
 
     # prepare dataframe for lstm by adding timesteps
-    lstm_df = model_prep.create_timesteps(
-        df, n_in=step_back, n_out=1, target_name=to_target
+    lstm_to_df = model_prep.create_timesteps(
+        to_df, n_in=step_back, n_out=1, target_name=to_target
     )
 
     # remove cases where spring data would leak into summer data (i.e. intial timesteps)
-    lstm_df = model_prep.remove_irrelevant_data(lstm_df, on_condition, step_back)
-
-    # save
-    print("\nSaving prepared dataframe...")
-    if save_timestepped:
-        lstm_df.to_csv(
-            f"../data/{to_building_name.lower()}/{to_building_name.lower()}{to_tower_number}_{season}_timestepped.csv"
-        )
+    lstm_to_df = model_prep.remove_irrelevant_data(lstm_to_df, on_condition, step_back)
 
     """
     2. Convert tower data into a model-compatible shape i.e. get timestepped data as a 3D vector
     """
 
     tss = TimeSeriesSplit(n_splits=3)
-    X = lstm_df.drop(f"{to_target}(t)", axis=1)  # drop target column
-    y = lstm_df[f"{to_target}(t)"]  # only have target column
+    X = lstm_to_df.drop(f"{to_target}(t)", axis=1)  # drop target column
+    y = lstm_to_df[f"{to_target}(t)"]  # only have target column
 
     vec_X_test = model_prep.df_to_3d(
         lstm_dtframe=X, num_columns=len(to_features) + 1, step_back=step_back
@@ -394,5 +374,5 @@ def inter_building_transfer_model(
     fig.show()
 
     fig.write_html(
-        f"../plots/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{season}_lstm.html"
+        f"../plots/interbuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{season}_lstm.html"
     )

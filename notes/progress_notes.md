@@ -135,5 +135,25 @@ _Ideas or Plan_
 - [x] Transfer ESB summer onto Kissam summer and vice versa
 
 > **Better preprocessing points**:<br/>
-> Handle zero temperatures as missing data<br/>
 > Make sure that during model transfers, order of columns is the same.<br/>
+
+**_:calendar: Tue, Jun 20_**
+
+- [x] Reread paper on transfer learning for building energy predictions
+- [x] Handle zero temperatures as missing data
+- [x] Clean up model generation and intra/inter building transfer notebooks
+- [ ] Learn about weight-fixed fine tuning
+
+> **Questions**:<br/>
+> Variables used in efficiency calculation are enteringWaterTemp, outdoorAirWetBulb and leavingWaterTemp, but I only predict leavingWaterTemp and rather use the first two to predict it. Isn't that a problem?<br/>
+> Currently predictions use the past 30 mins of data to make a prediction for the next 5 minute leavingWaterTemp – do I need to make predictions further away?
+
+_Links and papers that could be useful :link:_
+
+- [Statistical investigations of transfer learning-based methodology for shortterm building energy predictions](https://www.sciencedirect.com/science/article/pii/S0306261920300118?ref=pdf_download&fr=RR-2&rr=7d0b6d0aaba3f7cc)
+- [A short-term building cooling load prediction method using deep learning algorithms](https://www.sciencedirect.com/science/article/pii/S0306261917302921)
+- [Transfer learning with deep neural networks for model predictive control of HVAC and natural ventilation in smart buildings](https://www.sciencedirect.com/science/article/pii/S0959652619347365)
+
+> **Paper notes** for "Statistical investigations of transfer learning-based methodology for shortterm building energy predictions":<br/>
+> Compares using the pre-trained model for feature extraction vs weight initialization?<br/>
+> Preprocessing: Add categorical variable for dayOfWeek<br/>
