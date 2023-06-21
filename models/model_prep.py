@@ -5,16 +5,18 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 class NormalizationHandler(object):
-    def __init__(self):
+    def __init__(self, verbose: bool = False):
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.min_actual = None
         self.max_actual = None
+        self.verbose = verbose
 
     def normalize(self, dtframe: pd.DataFrame, target_col: str):
         self.min_actual = np.min(dtframe[target_col])
         self.max_actual = np.max(dtframe[target_col])
-        print(f"Mininimum {target_col} = {self.min_actual}")
-        print(f"Maximum {target_col} = {self.max_actual}")
+        if self.verbose:
+            print(f"Mininimum {target_col} = {self.min_actual}")
+            print(f"Maximum {target_col} = {self.max_actual}")
 
         scaled_df = pd.DataFrame(
             self.scaler.fit_transform(dtframe.values.astype("float32")),
@@ -33,7 +35,7 @@ class NormalizationHandler(object):
 
 
 def choose_season(
-    dtframe: pd.DataFrame, season: str, season_col_name: str, verbose: bool = True
+    dtframe: pd.DataFrame, season: str, season_col_name: str, verbose: bool = False
 ):
     """
     Include only the data from a selected season.
@@ -53,7 +55,10 @@ def choose_season(
 
 
 def remove_irrelevant_data(
-    dtframe: pd.DataFrame, on_condition: pd.Series, step_back: int, verbose: bool = True
+    dtframe: pd.DataFrame,
+    on_condition: pd.Series,
+    step_back: int,
+    verbose: bool = False,
 ):
     """
     Remove cases where the cooling tower was off, or had timestep data from a time when it was off/considered a different season
@@ -100,7 +105,6 @@ def df_to_3d(lstm_dtframe, num_columns, step_back):
                 value for (col_name, value) in sample.items() if suffix in col_name
             ]
             vec[sample_index][tsindex] = cur_ts_values
-            # print(f"{suffix}: {vec[sample_index][tsindex]} which is supposed to be {cur_ts_values}")
     return vec
 
 

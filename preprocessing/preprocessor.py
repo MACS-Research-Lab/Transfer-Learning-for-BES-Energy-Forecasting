@@ -9,6 +9,7 @@ def remove_missing_data(
     threshold: float = 0.03,
     initial_data_size: int = None,
     remove_generated: bool = True,
+    verbose: bool = False,
 ):
     """
     Remove missing data from a DataFrame such that all completely empty columns are removed.
@@ -46,51 +47,16 @@ def remove_missing_data(
     # only a few rows are empty so drop them
     if all(value < threshold for value in missing_info):
         datadf = datadf.dropna()
-        print(
-            f"After missing data removal, we are left with us with {datadf.shape[0]} rows out of {initial_data_size}."
-        )
+        if verbose:
+            print(
+                f"After missing data removal, we are left with us with {datadf.shape[0]} rows out of {initial_data_size}."
+            )
         return datadf
     else:
-        print(
-            f"Manual missing data handling required: Removed empty columns, but there more than {threshold*100}% missing data along the rows."
-        )
-
-
-# def remove_outliers_std(
-#     datadf: pd.DataFrame, column_names: List[str] = None, threshold=3
-# ):
-#     """
-#     Remove outliers from a DataFrame using standard deviation method.
-
-#     Args:
-#         datadf (pandas.DataFrame): Input DataFrame.
-#         columns (list): List of column names to check for outliers.
-#         threshold (float): Standard deviation threshold to determine outliers.
-#                            Default is 3.
-
-#     Returns:
-#         pandas.DataFrame: DataFrame with outliers removed.
-#     """
-#     if not column_names:
-#         column_names = datadf.select_dtypes(include=[int, float]).columns.to_list()
-
-#     filtered_df = datadf.copy()
-#     for column_name in column_names:
-#         std = filtered_df[column_name].std()
-#         mean = filtered_df[column_name].mean()
-#         cutoff = std * threshold
-#         lower_bound = mean - cutoff
-#         upper_bound = mean + cutoff
-#         filtered_df = filtered_df[
-#             (filtered_df[column_name] >= lower_bound)
-#             & (filtered_df[column_name] <= upper_bound)
-#         ]
-
-#     print(
-#         f"Outier removal removed {datadf.shape[0] - filtered_df.shape[0]} rows ({(datadf.shape[0] - filtered_df.shape[0]) / datadf.shape[0] * 100}% of data) with outliers. Now left with {filtered_df.shape[0]} rows."
-#     )
-
-#     return filtered_df
+        if verbose:
+            print(
+                f"Manual missing data handling required: Removed empty columns, but there more than {threshold*100}% missing data along the rows."
+            )
 
 
 def remove_outliers_std(
@@ -99,6 +65,7 @@ def remove_outliers_std(
     column_names: List[str] = None,
     threshold: int = 3,
     on_condition: pd.Series = None,
+    verbose: bool = False,
 ):
     """
     Remove outliers from a DataFrame using standard deviation method.
@@ -146,9 +113,10 @@ def remove_outliers_std(
 
         # if off data is present then lower bound is not used (because there are many zero values)
         if has_off_data:
-            print(
-                f"{column_name} has {filtered_df[(filtered_df[column_name] < 0) | (filtered_df[column_name] > upper_bound)].shape[0]} outliers"
-            )
+            if verbose:
+                print(
+                    f"{column_name} has {filtered_df[(filtered_df[column_name] < 0) | (filtered_df[column_name] > upper_bound)].shape[0]} outliers"
+                )
 
             filtered_df = filtered_df[
                 (filtered_df[column_name] >= 0)
@@ -162,9 +130,10 @@ def remove_outliers_std(
                 & (filtered_df[column_name] <= upper_bound)
             ]
 
-    print(
-        f"Outier removal removed {datadf.shape[0] - filtered_df.shape[0]} rows ({(datadf.shape[0] - filtered_df.shape[0]) / datadf.shape[0] * 100}% of data) with outliers. Now left with {filtered_df.shape[0]} rows."
-    )
+    if verbose:
+        print(
+            f"Outier removal removed {datadf.shape[0] - filtered_df.shape[0]} rows ({(datadf.shape[0] - filtered_df.shape[0]) / datadf.shape[0] * 100}% of data) with outliers. Now left with {filtered_df.shape[0]} rows."
+        )
 
     return filtered_df
 

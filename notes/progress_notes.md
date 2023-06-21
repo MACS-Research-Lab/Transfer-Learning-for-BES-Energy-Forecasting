@@ -4,7 +4,7 @@
 
 _Ideas or Plan_
 
-- [x] Recreate my model in keras with lstm instead of having it scikit learn: [View new model](../models/esb1_lstm_model.ipynb)
+- [x] Recreate my model in keras with lstm instead of having it scikit learn
 
 _Links and papers that could be useful :link:_
 
