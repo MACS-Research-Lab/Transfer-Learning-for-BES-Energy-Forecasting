@@ -1,9 +1,13 @@
 # Load Packages
 import pandas as pd
 import numpy as np
-import math
 from matplotlib import pyplot as plt
 import plotly.express as px
+
+import math
+from datetime import datetime
+import calendar
+import pytz
 
 import warnings
 
@@ -21,6 +25,13 @@ import model_prep
 datapath = "../data"
 
 step_back = 6  # window size = 6*5 = 30 mins
+season_map = {
+    "spring": [3, 4, 5],
+    "summer": [6, 7, 8],
+    "fall": [9, 10, 11],
+    "winter": [12, 1, 2],
+}
+year = 2022
 
 
 def create_model(
@@ -117,7 +128,15 @@ def create_model(
 
     # Create a new DataFrame with the desired 5-minute interval index
     new_index = pd.date_range(
-        start=results_df.index.min(), end=results_df.index.max(), freq="5min"
+        start=pytz.utc.localize(datetime(year, season_map[season][0], 1)),
+        end=pytz.utc.localize(
+            datetime(
+                year,
+                season_map[season][-1],
+                calendar.monthrange(year, season_map[season][-1])[1],
+            )
+        ),
+        freq="5min",
     )
     display_df = pd.DataFrame(index=new_index)
     # Merge the new DataFrame with the original DataFrame
@@ -152,12 +171,18 @@ def intra_season_transfer(
     to_tower_number: int,
     to_features: List[str],
     to_target: str,
-    season: str,
+    to_season: str,
+    from_season: str = None,
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
     finetune_plot_history: bool = False,
+    fixed_test_size: bool = False,
     displayResults: bool = True,
 ):
+    # fix inputs
+    if from_season == None:
+        from_season = to_season
+
     """
     1. Load data and do LSTM preprocessing
     """
@@ -167,7 +192,7 @@ def intra_season_transfer(
         tower_number=to_tower_number,
         features=to_features,
         target=to_target,
-        season=season,
+        season=to_season,
     )
 
     """
@@ -179,9 +204,14 @@ def intra_season_transfer(
 
     train_split = math.ceil(finetuning_percentage * len(X))
     X_train = X.iloc[:train_split, :]
-    X_test = X.iloc[train_split:, :]
     y_train = y.iloc[:train_split]
-    y_test = y.iloc[train_split:]
+    if fixed_test_size:
+        test_split = math.ceil(0.8 * len(X))  # fixing the test dataset to last 20%
+        X_test = X.iloc[test_split:, :]
+        y_test = y.iloc[test_split:]
+    else:
+        X_test = X.iloc[train_split:, :]
+        y_test = y.iloc[train_split:]
 
     # if no finetuning is required
     if finetuning_percentage == 0:
@@ -194,7 +224,7 @@ def intra_season_transfer(
 
         # load model
         model = keras.models.load_model(
-            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{season}_lstm/"
+            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
         )
 
     # if finetuning is required
@@ -210,14 +240,16 @@ def intra_season_transfer(
         vec_y_train = y_train.values
         vec_y_test = y_test.values
 
-        # print(vec_X_train.shape, vec_X_test.shape, vec_y_train.shape, vec_y_test.shape)
+        print(
+            f"finetuning_percentage: {finetuning_percentage} vec_X_train.shape: {vec_X_train.shape}, vec_X_test.shape: {vec_X_test.shape}, vec_y_train.shape: {vec_y_train.shape}, vec_y_test.shape: {vec_y_test.shape}"
+        )
 
         # load and finetune model
-        model = keras.models.load_model(
-            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{season}_lstm/"
+        base_model = keras.models.load_model(
+            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
         )
         model = finetune(
-            model=model,
+            model=base_model,
             training_feature_vec=vec_X_train,
             training_target_vec=vec_y_train,
             epochs=finetune_epochs,
@@ -259,20 +291,30 @@ def intra_season_transfer(
 
         fig = px.line(display_df, x=display_df.index, y=["actual", "predicted"])
         fig.update_layout(
-            title=f"{from_building_name} Tower {from_tower_number} model used on {to_building_name} Tower {to_tower_number} ({season}) ({finetuning_percentage*100}% fine-tuning) LSTM Model Results",
+            title=f"{from_building_name} Tower {from_tower_number} {from_season} model used on {to_building_name} Tower {to_tower_number} {to_season} ({finetuning_percentage*100}% fine-tuning) LSTM Model Results",
             xaxis_title="time",
             yaxis_title=to_target,
         )
         fig.show()
 
         if from_building_name == to_building_name:
-            fig.write_html(
-                f"../plots/intrabuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{season}_{finetuning_percentage}_lstm.html"
-            )
+            if from_season != to_season:
+                fig.write_html(
+                    f"../plots/intrabuilding_transfers/interseason/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_{finetuning_percentage}_lstm.html"
+                )
+            else:
+                fig.write_html(
+                    f"../plots/intrabuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{to_season}_{finetuning_percentage}_lstm.html"
+                )
         else:
-            fig.write_html(
-                f"../plots/interbuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{finetuning_percentage}_{season}_lstm.html"
-            )
+            if from_season != to_season:
+                fig.write_html(
+                    f"../plots/interbuilding_transfers/interseason/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_{finetuning_percentage}_lstm.html"
+                )
+            else:
+                fig.write_html(
+                    f"../plots/interbuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{finetuning_percentage}_{to_season}_lstm.html"
+                )
 
     if displayResults:
         display_transfer_results()
