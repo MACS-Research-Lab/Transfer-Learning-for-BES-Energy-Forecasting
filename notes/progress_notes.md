@@ -134,19 +134,11 @@ _Ideas or Plan_
 - [x] Comparison & correlation analysis of ESB/Kissam variables
 - [x] Transfer ESB summer onto Kissam summer and vice versa
 
-> **Better preprocessing points**:<br/>
-> Make sure that during model transfers, order of columns is the same.<br/>
-
 **_:calendar: Tue, Jun 20_**
 
 - [x] Reread paper on transfer learning for building energy predictions
 - [x] Handle zero temperatures as missing data
 - [x] Clean up model generation and intra/inter building transfer notebooks
-- [ ] Learn about weight-fixed fine tuning
-
-> **Questions**:<br/>
-> Variables used in efficiency calculation are enteringWaterTemp, outdoorAirWetBulb and leavingWaterTemp, but I only predict leavingWaterTemp and rather use the first two to predict it. Isn't that a problem?<br/>
-> Currently predictions use the past 30 mins of data to make a prediction for the next 5 minute leavingWaterTemp – do I need to make predictions further away?
 
 _Links and papers that could be useful :link:_
 
@@ -157,3 +149,41 @@ _Links and papers that could be useful :link:_
 > **Paper notes** for "Statistical investigations of transfer learning-based methodology for shortterm building energy predictions":<br/>
 > Compares using the pre-trained model for feature extraction vs weight initialization?<br/>
 > Preprocessing: Add categorical variable for dayOfWeek<br/>
+
+**_:calendar: Wed, Jun 21_**
+
+- [x] Write generalized code for finetuning
+- [x] Generate finetuning graphs
+- [x] Compare finetuning results with fixed and variable test set sizes
+
+_Links and papers that could be useful :link:_
+
+- [Transfer Learning Methods](https://medium.com/georgian-impact-blog/transfer-learning-part-1-ed0c174ad6e7#98b1)
+
+**_:calendar: Thu, Jun 22_**
+
+- [x] Add dayOfWeek and hourOfDay features
+- [x] Improve preprocessing (add dayOfWeek & hourOfDay, uniform feature naming)
+- [x] Create fall season models for ESB+Kissam
+- [ ] Inter-season intra-tower transfers between summer and fall
+
+> **Questions**:<br/>
+> Currently predictions use the past 30 mins of data to make a prediction for the next 5 minute leavingWaterTemp – do I need to make predictions further away?<br/>
+
+**_:calendar: Fri, Jun 23_**
+
+- [ ] Use derivatives in predictions
+- [ ] Check plotting year (I fixed it to 2022 but there's also 2023 data)
+- [ ] Fix normalization method
+- [x] Change train/test/validation sampling method from past-future to random
+
+## **Week 5**
+
+- [ ] Regularization (overfitting)
+- [ ] Test models on MRB
+- [ ] Mention amount of data available in metric graphs
+- [ ] Predict 1 hour away
+- [ ] Inter-season intra-building transfers between summer and fall
+- [ ] Inter-season inter-building transfers between summer and fall
+
+> **Idea**: For inter-season transfers, feed in a min/max reading to the scaler to adjust to seasonal temperatures
