@@ -57,6 +57,7 @@ def remove_missing_data(
             print(
                 f"Manual missing data handling required: Removed empty columns, but there more than {threshold*100}% missing data along the rows."
             )
+    return datadf
 
 
 def remove_outliers_std(

@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 
 from typing import List
 
-from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import keras
@@ -42,17 +42,19 @@ def create_model(
     target: str,
     plot_history: bool = False,
     train_percentage: float = 0.75,
+    use_delta: bool = True,
 ):
     """
     1. Convert data into a model-compatible shape
     """
 
-    lstm_df, scaler = create_preprocessed_lstm_df(
+    lstm_df, scaler, first_temp = create_preprocessed_lstm_df(
         building_name=building_name,
         tower_number=tower_number,
         features=features,
         target=target,
         season=season,
+        use_delta=use_delta,
     )
 
     """
@@ -62,13 +64,10 @@ def create_model(
     X = lstm_df.drop(f"{target}(t)", axis=1)  # drop target column
     y = lstm_df[f"{target}(t)"]  # only have target column
 
-    train_split = math.ceil(train_percentage * len(X))
-
     # split into input and outputs
-    X_train = X.iloc[:train_split, :]
-    X_test = X.iloc[train_split:, :]
-    y_train = y.iloc[:train_split]
-    y_test = y.iloc[train_split:]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=(1 - train_percentage), shuffle=False
+    )
 
     """
     3. Get timestepped data as a 3D vector
@@ -125,6 +124,9 @@ def create_model(
         index=y_test.index,
     )
     results_df = scaler.denormalize_results(results_df)
+    if use_delta:
+        results_df["actual"] = results_df["actual"] + first_temp
+        results_df["predicted"] = results_df["predicted"] + first_temp
 
     # Create a new DataFrame with the desired 5-minute interval index
     new_index = pd.date_range(
@@ -176,8 +178,8 @@ def intra_season_transfer(
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
     finetune_plot_history: bool = False,
-    fixed_test_size: bool = False,
-    displayResults: bool = True,
+    display_results: bool = True,
+    use_delta: bool = True,
 ):
     # fix inputs
     if from_season == None:
@@ -187,13 +189,15 @@ def intra_season_transfer(
     1. Load data and do LSTM preprocessing
     """
 
-    lstm_to_df, scaler = create_preprocessed_lstm_df(
+    lstm_to_df, to_scaler, to_first_temp = create_preprocessed_lstm_df(
         building_name=to_building_name,
         tower_number=to_tower_number,
         features=to_features,
         target=to_target,
         season=to_season,
+        use_delta=use_delta,
     )
+    print(f"Tower {to_tower_number} first temp: {to_first_temp}")
 
     """
     2. Convert tower data into a model-compatible shape i.e. get timestepped data as a 3D vector
@@ -202,19 +206,12 @@ def intra_season_transfer(
     X = lstm_to_df.drop(f"{to_target}(t)", axis=1)  # drop target column
     y = lstm_to_df[f"{to_target}(t)"]  # only have target column
 
-    train_split = math.ceil(finetuning_percentage * len(X))
-    X_train = X.iloc[:train_split, :]
-    y_train = y.iloc[:train_split]
-    if fixed_test_size:
-        test_split = math.ceil(0.8 * len(X))  # fixing the test dataset to last 20%
-        X_test = X.iloc[test_split:, :]
-        y_test = y.iloc[test_split:]
-    else:
-        X_test = X.iloc[train_split:, :]
-        y_test = y.iloc[train_split:]
-
     # if no finetuning is required
     if finetuning_percentage == 0:
+        # entire set is for testing
+        X_test = X
+        y_test = y
+
         # create 3d vector form of data
         vec_X_test = model_prep.df_to_3d(
             lstm_dtframe=X_test, num_columns=len(to_features) + 1, step_back=step_back
@@ -229,6 +226,11 @@ def intra_season_transfer(
 
     # if finetuning is required
     else:
+        # split train and test set
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=(1 - finetuning_percentage), shuffle=False
+        )
+
         # create 3d vector form of data
         vec_X_train = model_prep.df_to_3d(
             lstm_dtframe=X_train, num_columns=len(to_features) + 1, step_back=step_back
@@ -274,7 +276,12 @@ def intra_season_transfer(
         },
         index=y_test.index,
     )
-    results_df = scaler.denormalize_results(results_df)
+    print(results_df)
+    results_df = to_scaler.denormalize_results(results_df)
+    print(results_df)
+    if use_delta:
+        results_df["actual"] = results_df["actual"] + to_first_temp
+        results_df["predicted"] = results_df["predicted"] + to_first_temp
 
     rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
 
@@ -316,14 +323,19 @@ def intra_season_transfer(
                     f"../plots/interbuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{finetuning_percentage}_{to_season}_lstm.html"
                 )
 
-    if displayResults:
+    if display_results:
         display_transfer_results()
 
     return rmse
 
 
 def create_preprocessed_lstm_df(
-    building_name: str, tower_number: int, features: List[str], target: str, season: str
+    building_name: str,
+    tower_number: int,
+    features: List[str],
+    target: str,
+    season: str,
+    use_delta: bool = True,
 ):
     """
     1. Load data and do LSTM preprocessing
@@ -348,6 +360,11 @@ def create_preprocessed_lstm_df(
     # select features and targets and create final dataframe that includes only relevant features and targets
     dtframe = dtframe[features].join(dtframe[target], on=dtframe.index)
 
+    # if difference from first temperature should be used as for predictions then return the first temperature
+    first_temp = dtframe.iloc[0, dtframe.columns.get_loc(target)]
+    if use_delta:
+        dtframe[target] = dtframe[target] - first_temp
+
     # normalize data
     scaler = model_prep.NormalizationHandler()
     dtframe = scaler.normalize(dtframe=dtframe, target_col=target)
@@ -361,7 +378,7 @@ def create_preprocessed_lstm_df(
     lstm_dtframe = model_prep.remove_irrelevant_data(
         lstm_dtframe, on_condition, step_back
     )
-    return lstm_dtframe, scaler
+    return lstm_dtframe, scaler, first_temp
 
 
 def finetune(

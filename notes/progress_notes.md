@@ -172,15 +172,22 @@ _Links and papers that could be useful :link:_
 
 **_:calendar: Fri, Jun 23_**
 
-- [ ] Use derivatives in predictions
-- [ ] Check plotting year (I fixed it to 2022 but there's also 2023 data)
-- [ ] Fix normalization method
+- [x] Use derivatives in predictions
 - [x] Change train/test/validation sampling method from past-future to random
+
+**_:calendar: Sat-Sun, Jun 24-5_**
+
+- [x] Preprocess MRB data
+- [ ] Test models on MRB
+- [x] Remove fixed_test_size parameter
+
+> **Note**: I've taken MRB AHU 1 humidity and dry bulb temperature and included it in all MRB towers
 
 ## **Week 5**
 
+- [ ] Check plotting year (I fixed it to 2022 but there's also 2023 data)
+- [ ] Fix normalization method
 - [ ] Regularization (overfitting)
-- [ ] Test models on MRB
 - [ ] Mention amount of data available in metric graphs
 - [ ] Predict 1 hour away
 - [ ] Inter-season intra-building transfers between summer and fall
