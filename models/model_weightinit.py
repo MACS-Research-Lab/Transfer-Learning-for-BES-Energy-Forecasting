@@ -4,11 +4,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import plotly.express as px
 
-import math
-from datetime import datetime
-import calendar
-import pytz
-
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -17,12 +12,13 @@ from typing import List
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
 
 import keras
 
 import model_prep
 
-datapath = "../data"
+rootpath = ".."
 
 step_back = 6  # window size = 6*5 = 30 mins
 season_map = {
@@ -31,15 +27,14 @@ season_map = {
     "fall": [9, 10, 11],
     "winter": [12, 1, 2],
 }
-year = 2022
 
 
-def create_model(
+def create_base_model(
     building_name: str,
     tower_number: int,
-    season: str,
     features: List[str],
     target: str,
+    season: str = None,
     plot_history: bool = False,
     train_percentage: float = 0.75,
     use_delta: bool = True,
@@ -48,7 +43,7 @@ def create_model(
     1. Convert data into a model-compatible shape
     """
 
-    lstm_df, scaler, first_temp = create_preprocessed_lstm_df(
+    lstm_df, first_temp = model_prep.create_preprocessed_lstm_df(
         building_name=building_name,
         tower_number=tower_number,
         features=features,
@@ -56,6 +51,8 @@ def create_model(
         season=season,
         use_delta=use_delta,
     )
+    if not season:
+        season = "allyear"
 
     """
     2. Split data into training and testing sets
@@ -68,6 +65,11 @@ def create_model(
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=(1 - train_percentage), shuffle=False
     )
+
+    # scale feature data
+    scaler = MinMaxScaler().fit(X_train)
+    X_train[X_train.columns] = scaler.transform(X_train)
+    X_test[X_test.columns] = scaler.transform(X_test)
 
     """
     3. Get timestepped data as a 3D vector
@@ -89,10 +91,14 @@ def create_model(
     """
     model = keras.models.Sequential()
     model.add(
-        keras.layers.LSTM(50, input_shape=(vec_X_train.shape[1], vec_X_train.shape[2]))
+        keras.layers.LSTM(
+            50,
+            input_shape=(vec_X_train.shape[1], vec_X_train.shape[2]),
+            bias_regularizer=keras.regularizers.L1(0.01),
+        )
     )
-    model.add(keras.layers.Dense(1))
-    model.compile(loss="mae", optimizer="adam")
+    model.add(keras.layers.Dense(1, kernel_regularizer=keras.regularizers.L1(0.01)))
+    model.compile(loss="mse", optimizer="adam")
 
     history = model.fit(
         vec_X_train,
@@ -123,28 +129,18 @@ def create_model(
         },
         index=y_test.index,
     )
-    results_df = scaler.denormalize_results(results_df)
+
     if use_delta:
         results_df["actual"] = results_df["actual"] + first_temp
         results_df["predicted"] = results_df["predicted"] + first_temp
 
     # Create a new DataFrame with the desired 5-minute interval index
-    new_index = pd.date_range(
-        start=pytz.utc.localize(datetime(year, season_map[season][0], 1)),
-        end=pytz.utc.localize(
-            datetime(
-                year,
-                season_map[season][-1],
-                calendar.monthrange(year, season_map[season][-1])[1],
-            )
-        ),
-        freq="5min",
-    )
-    display_df = pd.DataFrame(index=new_index)
-    # Merge the new DataFrame with the original DataFrame
-    display_df = display_df.merge(
-        results_df, how="left", left_index=True, right_index=True
-    )
+    # Create a new DataFrame with the desired 5-minute interval index, and merge the new DataFrame with the original DataFrame
+    display_df = pd.DataFrame(
+        index=pd.date_range(
+            start=results_df.index.min(), end=results_df.index.max(), freq="5min"
+        )
+    ).merge(results_df, how="left", left_index=True, right_index=True)
 
     mabs_error = mean_absolute_error(results_df["actual"], results_df["predicted"])
     rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
@@ -159,21 +155,23 @@ def create_model(
     )
     fig.show()
 
-    fig.write_html(
-        f"../plots/prepared_models/{building_name.lower()}{tower_number}_{season}_lstm.html"
-    )
+    # fig.write_html(
+    #     f"../plots/prepared_models/{building_name.lower()}{tower_number}_{season}_lstm.html"
+    # )
     model.summary()
-    model.save(f"../models_saved/{building_name.lower()}{tower_number}_{season}_lstm/")
+    model.save(
+        f"{rootpath}/models_saved/{building_name.lower()}{tower_number}_{season}_lstm/"
+    )
 
 
-def intra_season_transfer(
+def weight_init_transfer(
     from_building_name: str,
     from_tower_number: int,
     to_building_name: str,
     to_tower_number: int,
     to_features: List[str],
     to_target: str,
-    to_season: str,
+    to_season: str = None,
     from_season: str = None,
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
@@ -182,14 +180,14 @@ def intra_season_transfer(
     use_delta: bool = True,
 ):
     # fix inputs
-    if from_season == None:
+    if from_season == None and to_season != None:
         from_season = to_season
 
     """
     1. Load data and do LSTM preprocessing
     """
 
-    lstm_to_df, to_scaler, to_first_temp = create_preprocessed_lstm_df(
+    lstm_to_df, to_first_temp = model_prep.create_preprocessed_lstm_df(
         building_name=to_building_name,
         tower_number=to_tower_number,
         features=to_features,
@@ -197,6 +195,9 @@ def intra_season_transfer(
         season=to_season,
         use_delta=use_delta,
     )
+    if not to_season:
+        to_season = from_season = "allyear"
+
     print(f"Tower {to_tower_number} first temp: {to_first_temp}")
 
     """
@@ -211,6 +212,9 @@ def intra_season_transfer(
         # entire set is for testing
         X_test = X
         y_test = y
+
+        # scale feature data
+        X_test[X_test.columns] = MinMaxScaler().fit_transform(X_test)
 
         # create 3d vector form of data
         vec_X_test = model_prep.df_to_3d(
@@ -230,6 +234,12 @@ def intra_season_transfer(
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=(1 - finetuning_percentage), shuffle=False
         )
+
+        # scale feature data
+        scaler = MinMaxScaler()
+        scaler = scaler.fit(X_train)
+        X_train[X_train.columns] = scaler.transform(X_train)
+        X_test[X_test.columns] = scaler.transform(X_test)
 
         # create 3d vector form of data
         vec_X_train = model_prep.df_to_3d(
@@ -276,14 +286,13 @@ def intra_season_transfer(
         },
         index=y_test.index,
     )
-    print(results_df)
-    results_df = to_scaler.denormalize_results(results_df)
-    print(results_df)
+
     if use_delta:
         results_df["actual"] = results_df["actual"] + to_first_temp
         results_df["predicted"] = results_df["predicted"] + to_first_temp
 
     rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
+    mabs_error = mean_absolute_error(results_df["actual"], results_df["predicted"])
 
     # display results
     def display_transfer_results():
@@ -302,8 +311,9 @@ def intra_season_transfer(
             xaxis_title="time",
             yaxis_title=to_target,
         )
-        fig.show()
+        return fig
 
+        """
         if from_building_name == to_building_name:
             if from_season != to_season:
                 fig.write_html(
@@ -322,63 +332,12 @@ def intra_season_transfer(
                 fig.write_html(
                     f"../plots/interbuilding_transfers/{from_building_name.lower()}{from_tower_number}_to_{to_building_name.lower()}{to_tower_number}_{finetuning_percentage}_{to_season}_lstm.html"
                 )
+        """
 
     if display_results:
-        display_transfer_results()
+        fig = display_transfer_results()
 
-    return rmse
-
-
-def create_preprocessed_lstm_df(
-    building_name: str,
-    tower_number: int,
-    features: List[str],
-    target: str,
-    season: str,
-    use_delta: bool = True,
-):
-    """
-    1. Load data and do LSTM preprocessing
-    """
-    # load data
-    dtframe = pd.read_csv(
-        f"../data/{building_name.lower()}/{building_name.lower()}_tower_{tower_number}_preprocessed.csv",
-        index_col="time",
-    )
-    dtframe.index = pd.to_datetime(dtframe.index)
-
-    # only take data for one season
-    dtframe = model_prep.choose_season(
-        dtframe,
-        season=season,
-        season_col_name=f"{building_name}_Tower_{tower_number} season",
-    )
-
-    # save a boolean series that specifies whether the cooling tower is on
-    on_condition = dtframe[f"{building_name}_Tower_{tower_number} fanStatus"]
-
-    # select features and targets and create final dataframe that includes only relevant features and targets
-    dtframe = dtframe[features].join(dtframe[target], on=dtframe.index)
-
-    # if difference from first temperature should be used as for predictions then return the first temperature
-    first_temp = dtframe.iloc[0, dtframe.columns.get_loc(target)]
-    if use_delta:
-        dtframe[target] = dtframe[target] - first_temp
-
-    # normalize data
-    scaler = model_prep.NormalizationHandler()
-    dtframe = scaler.normalize(dtframe=dtframe, target_col=target)
-
-    # prepare dataframe for lstm by adding timesteps
-    lstm_dtframe = model_prep.create_timesteps(
-        dtframe, n_in=step_back, n_out=1, target_name=target
-    )
-
-    # remove cases where spring data would leak into summer data (i.e. intial timesteps)
-    lstm_dtframe = model_prep.remove_irrelevant_data(
-        lstm_dtframe, on_condition, step_back
-    )
-    return lstm_dtframe, scaler, first_temp
+    return rmse, fig, mabs_error
 
 
 def finetune(
@@ -392,7 +351,7 @@ def finetune(
 
     model.compile(
         optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
-        loss="mae",
+        loss="mse",
         metrics=[keras.metrics.BinaryAccuracy()],
     )
 

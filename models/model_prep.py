@@ -1,37 +1,9 @@
+from typing import List
 import numpy as np
 import pandas as pd
 from datetime import timedelta
-from sklearn.preprocessing import MinMaxScaler
 
-
-class NormalizationHandler(object):
-    def __init__(self, verbose: bool = False):
-        self.scaler = MinMaxScaler(feature_range=(0, 1))
-        self.min_actual = None
-        self.max_actual = None
-        self.verbose = verbose
-
-    def normalize(self, dtframe: pd.DataFrame, target_col: str):
-        self.min_actual = np.min(dtframe[target_col])
-        self.max_actual = np.max(dtframe[target_col])
-        if self.verbose:
-            print(f"Mininimum {target_col} = {self.min_actual}")
-            print(f"Maximum {target_col} = {self.max_actual}")
-
-        scaled_df = pd.DataFrame(
-            self.scaler.fit_transform(dtframe.values.astype("float32")),
-            columns=dtframe.columns,
-            index=dtframe.index,
-        )
-        return scaled_df
-
-    def denormalize_results(self, results_dtframe: pd.DataFrame):
-        for column in results_dtframe.columns:
-            results_dtframe[column] = (
-                results_dtframe[column] * (self.max_actual - self.min_actual)
-                + self.min_actual
-            )
-        return results_dtframe
+rootpath = ".."
 
 
 def choose_season(
@@ -156,3 +128,59 @@ def create_timesteps(df, target_name, n_in=1, n_out=1):
             agg[col].fillna(False, inplace=True)
 
     return agg
+
+
+def create_preprocessed_lstm_df(
+    building_name: str,
+    tower_number: int,
+    features: List[str],
+    target: str,
+    season: str = None,
+    use_delta: bool = True,
+    step_back: int = 6,
+):
+    """
+    1. Load data and do LSTM preprocessing
+    """
+    # load data
+    dtframe = pd.read_csv(
+        f"{rootpath}/data/{building_name.lower()}/{building_name.lower()}_tower_{tower_number}_preprocessed.csv",
+        index_col="time",
+    )
+    dtframe.index = pd.to_datetime(dtframe.index)
+
+    # only take data for one season
+    if season:
+        dtframe = choose_season(
+            dtframe,
+            season=season,
+            season_col_name=f"{building_name}_Tower_{tower_number} season",
+        )
+    else:
+        season = "allyear"
+
+    # save a boolean series that specifies whether the cooling tower is on
+    on_condition = dtframe[f"{building_name}_Tower_{tower_number} fanStatus"]
+
+    # select features and targets and create final dataframe that includes only relevant features and targets
+    dtframe = dtframe[features].join(dtframe[target], on=dtframe.index)
+
+    # prepare dataframe for lstm by adding timesteps
+    lstm_dtframe = create_timesteps(
+        dtframe, n_in=step_back, n_out=1, target_name=target
+    )
+
+    # remove cases where spring data would leak into summer data (i.e. intial timesteps)
+    lstm_dtframe = remove_irrelevant_data(lstm_dtframe, on_condition, step_back)
+
+    # if difference from first temperature should be used as for predictions then return the first temperature
+    modified_target_name = f"{target}(t)"
+    first_temp = lstm_dtframe.iloc[
+        0, lstm_dtframe.columns.get_loc(modified_target_name)
+    ]
+    if use_delta:
+        lstm_dtframe[modified_target_name] = (
+            lstm_dtframe[modified_target_name] - first_temp
+        )
+
+    return lstm_dtframe, first_temp
