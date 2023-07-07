@@ -1,10 +1,9 @@
 # Load Packages
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
 import plotly.express as px
 
-import warnings
+import warnings, sys, os
 
 warnings.filterwarnings("ignore")
 
@@ -16,9 +15,9 @@ from sklearn.preprocessing import MinMaxScaler
 
 import keras
 
-import model_prep
-
 rootpath = ".."
+sys.path.insert(0, f"{os.getcwd()}/{rootpath}/models")
+import model_prep
 
 step_back = 6  # window size = 6*5 = 30 mins
 season_map = {
@@ -29,7 +28,7 @@ season_map = {
 }
 
 
-def weight_init_transfer(
+def feature_extr_transfer(
     from_building_name: str,
     from_tower_number: int,
     to_building_name: str,
@@ -40,7 +39,6 @@ def weight_init_transfer(
     from_season: str = None,
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
-    finetune_plot_history: bool = False,
     display_results: bool = True,
     use_delta: bool = True,
 ):
@@ -122,15 +120,23 @@ def weight_init_transfer(
         )
 
         # load and finetune model
-        base_model = keras.models.load_model(
+        model = keras.models.load_model(
             f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
         )
-        model = finetune(
-            model=base_model,
-            training_feature_vec=vec_X_train,
-            training_target_vec=vec_y_train,
-            epochs=finetune_epochs,
-            plot_history=finetune_plot_history,
+
+        # freeze lstm layer
+        model.layers[0].trainable = False
+        # dense layer to be finetuned
+        model.layers[1].trainable = False
+
+        model.compile(
+            optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
+            loss="mse",
+            metrics=[keras.metrics.BinaryAccuracy()],
+        )
+
+        history = model.fit(
+            vec_X_train, vec_y_train, epochs=finetune_epochs, verbose=0, shuffle=False
         )
 
     """
@@ -143,7 +149,7 @@ def weight_init_transfer(
     4. Display results
     """
 
-    # save results
+    # show results
     results_df = pd.DataFrame(
         {
             "actual": vec_y_test.reshape((vec_y_test.shape[0])),
@@ -182,35 +188,3 @@ def weight_init_transfer(
         fig = display_transfer_results()
 
     return rmse, fig, mabs_error
-
-
-def finetune(
-    model: keras.engine.sequential.Sequential,
-    training_feature_vec: np.ndarray,
-    training_target_vec: np.ndarray,
-    epochs: int = 10,
-    plot_history: bool = False,
-):
-    model.trainable = True
-
-    model.compile(
-        optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
-        loss="mse",
-        metrics=[keras.metrics.BinaryAccuracy()],
-    )
-
-    history = model.fit(
-        training_feature_vec,
-        training_target_vec,
-        epochs=epochs,
-        verbose=0,
-        shuffle=False,
-    )
-
-    # plot history
-    if plot_history:
-        plt.plot(history.history["loss"], label="train")
-        plt.legend()
-        plt.show()
-
-    return model

@@ -52,7 +52,7 @@ _Ideas or Plan_
 
 - [x] Preprocess ESB data for both cooling towers
 - [x] Create some generalized preprocessing functions (missing data removal, outlier removal)
-- [ ] Decide on which column to set a target for predictions
+- [x] Decide on which column to set a target for predictions
 
 **_:calendar: Wed, Jun 7_**
 
@@ -125,7 +125,7 @@ _Ideas or Plan_
 **_:calendar: Fri, Jun 16_**
 
 - [x] Improve presentation of results
-- [ ] Go through faulty results in replicated LSTM
+- [x] Go through faulty results in replicated LSTM
 
 ## **Week 4**
 
@@ -165,7 +165,7 @@ _Links and papers that could be useful :link:_
 - [x] Add dayOfWeek and hourOfDay features
 - [x] Improve preprocessing (add dayOfWeek & hourOfDay, uniform feature naming)
 - [x] Create fall season models for ESB+Kissam
-- [ ] Inter-season intra-tower transfers between summer and fall
+- [x] Inter-season intra-tower transfers between summer and fall
 
 > **Questions**:<br/>
 > Currently predictions use the past 30 mins of data to make a prediction for the next 5 minute leavingWaterTemp – do I need to make predictions further away?<br/>
@@ -175,22 +175,76 @@ _Links and papers that could be useful :link:_
 - [x] Use derivatives in predictions
 - [x] Change train/test/validation sampling method from past-future to random
 
-**_:calendar: Sat-Sun, Jun 24-5_**
+**_:calendar: Sat-Sun, Jun 24-25_**
 
 - [x] Preprocess MRB data
-- [ ] Test models on MRB
+- [x] Test models on MRB
 - [x] Remove fixed_test_size parameter
-
-> **Note**: I've taken MRB AHU 1 humidity and dry bulb temperature and included it in all MRB towers
 
 ## **Week 5**
 
-- [ ] Check plotting year (I fixed it to 2022 but there's also 2023 data)
-- [ ] Fix normalization method
-- [ ] Regularization (overfitting)
-- [ ] Mention amount of data available in metric graphs
-- [ ] Predict 1 hour away
-- [ ] Inter-season intra-building transfers between summer and fall
-- [ ] Inter-season inter-building transfers between summer and fall
+**_:calendar: Monday, Jun 26_**
 
-> **Idea**: For inter-season transfers, feed in a min/max reading to the scaler to adjust to seasonal temperatures
+- [x] Improve result presentation plots
+- [ ] Mention amount of data available in metric graphs
+
+**_:calendar: Tuesday, Jun 27_**
+
+- [x] Regularization (overfitting) - used L1 in LSTM layer
+- [x] Plot mean absolute error
+
+**_:calendar: Wednesday, Jun 28_**
+
+- [x] Fix normalization method
+- [x] Study feature extraction
+
+**_:calendar: Thursday, Jun 29_**
+
+- [ ] Create scaling, shape transforming, predicting model pipeline
+- [x] Write grid search code
+- [x] Check plotting year (I fixed it to 2022 but there's also 2023 data)
+
+## **Week 6**
+
+**_:calendar: Monday, Jul 3_**
+
+- [x] All year data interbuilding transfers
+- [x] Organize weight initialized model
+- [x] Start feature extraction by freezing LSTM layer and training Dense
+- [ ] Run grid search overnight
+
+**_:calendar: Tuesday, Jul 4_**
+
+- [x] Study feature extraction methods
+
+**_:calendar: Wednesday, Jul 5_**
+
+- [x] Re-read the statistical investigations paper
+- [x] MRB missing data to be taken from ESB instead of MRB AHU
+
+**_:calendar: Thursday, Jul 6_**
+
+- [x] Change feature extraction: train both layers, finetune dense
+
+**_:calendar: Friday, Jul 7_**
+
+- [x] Generalize feature extraction and run for all buildings
+- [x] Create PIRs plot
+
+## **Week 7**
+
+- [ ] Mention data percentage
+- [ ] Random sampling, run 5 times with different random seeds and plot rmse + pir each time
+- [ ] Mention random seed
+
+Next steps?
+
+1. Simulate the two different forms of data availability discussed in the paper? or state actual data availability?
+   - Random data points throughout the year being available
+   - Many data points over a certain month period being available, but none at all of other months
+     Ans: State actual data availability
+2. Use performance improvement ratio? Done.
+   - (RMSE_old - RMSE_new) / RMSE_old
+3. Predict 1 hour away
+4. Inter-season intra-building transfers between summer and fall
+5. Inter-season inter-building transfers between summer and fall
