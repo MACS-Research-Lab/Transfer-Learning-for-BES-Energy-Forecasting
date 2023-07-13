@@ -1,4 +1,5 @@
 # Load Packages
+import os
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
@@ -40,9 +41,9 @@ def weight_init_transfer(
     from_season: str = None,
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
-    finetune_plot_history: bool = False,
     display_results: bool = True,
     use_delta: bool = True,
+    shuffle_seed: int = 42,
 ):
     # fix inputs
     if from_season == None and to_season != None:
@@ -97,7 +98,11 @@ def weight_init_transfer(
     else:
         # split train and test set
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=(1 - finetuning_percentage), shuffle=False
+            X,
+            y,
+            test_size=(1 - finetuning_percentage),
+            shuffle=True,
+            random_state=shuffle_seed,
         )
 
         # scale feature data
@@ -117,21 +122,27 @@ def weight_init_transfer(
         vec_y_train = y_train.values
         vec_y_test = y_test.values
 
-        print(
-            f"finetuning_percentage: {finetuning_percentage} vec_X_train.shape: {vec_X_train.shape}, vec_X_test.shape: {vec_X_test.shape}, vec_y_train.shape: {vec_y_train.shape}, vec_y_test.shape: {vec_y_test.shape}"
-        )
+        # if model finetuning has already been done, simply load the model
+        model_path = f"{rootpath}/models_saved/lstmdense_ft/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_ft{finetuning_percentage}_seed{shuffle_seed}/"
 
-        # load and finetune model
-        base_model = keras.models.load_model(
-            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
-        )
-        model = finetune(
-            model=base_model,
-            training_feature_vec=vec_X_train,
-            training_target_vec=vec_y_train,
-            epochs=finetune_epochs,
-            plot_history=finetune_plot_history,
-        )
+        if os.path.exists(model_path):
+            model = keras.models.load_model(model_path)
+            print(f"Pre-saved model for ft={finetuning_percentage} seed={shuffle_seed}")
+
+        # if model finetuning has not been done, finetune a base model
+        else:
+            # load and finetune model
+            base_model = keras.models.load_model(
+                f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
+            )
+            print(f"Finetuning for ft={finetuning_percentage} seed={shuffle_seed}")
+            model = finetune(
+                model=base_model,
+                training_feature_vec=vec_X_train,
+                training_target_vec=vec_y_train,
+                epochs=finetune_epochs,
+            )
+            model.save(model_path)
 
     """
     3. Load model, finetune and predict
@@ -180,6 +191,8 @@ def weight_init_transfer(
 
     if display_results:
         fig = display_transfer_results()
+    else:
+        fig = None
 
     return rmse, fig, mabs_error
 
@@ -189,7 +202,6 @@ def finetune(
     training_feature_vec: np.ndarray,
     training_target_vec: np.ndarray,
     epochs: int = 10,
-    plot_history: bool = False,
 ):
     model.trainable = True
 
@@ -199,18 +211,12 @@ def finetune(
         metrics=[keras.metrics.BinaryAccuracy()],
     )
 
-    history = model.fit(
+    model.fit(
         training_feature_vec,
         training_target_vec,
         epochs=epochs,
         verbose=0,
         shuffle=False,
     )
-
-    # plot history
-    if plot_history:
-        plt.plot(history.history["loss"], label="train")
-        plt.legend()
-        plt.show()
 
     return model

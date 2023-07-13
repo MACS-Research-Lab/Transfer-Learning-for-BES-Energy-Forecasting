@@ -38,6 +38,7 @@ def create_base_model(
     plot_history: bool = False,
     train_percentage: float = 0.75,
     use_delta: bool = True,
+    shuffle_seed: int = 42,
 ):
     """
     1. Convert data into a model-compatible shape
@@ -63,7 +64,7 @@ def create_base_model(
 
     # split into input and outputs
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=(1 - train_percentage), shuffle=False
+        X, y, test_size=(1 - train_percentage), shuffle=True, random_state=shuffle_seed
     )
 
     # scale feature data
@@ -134,7 +135,31 @@ def create_base_model(
         results_df["actual"] = results_df["actual"] + first_temp
         results_df["predicted"] = results_df["predicted"] + first_temp
 
-    # Create a new DataFrame with the desired 5-minute interval index
+    # SAVE ERROR AND DATA AVAILABILITY INFORMATION
+
+    # calculate, display and save error results
+    mae = mean_absolute_error(results_df["actual"], results_df["predicted"])
+    rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
+    mae_sd = np.std(np.abs(results_df["actual"] - results_df["predicted"]))
+    error_df = pd.read_csv(
+        f"{rootpath}/data/results/base_model_errors.csv",
+        index_col="building-tower-season",
+    )
+    error_df.loc[f"{building_name}{tower_number}_{season}"] = [rmse, mae, mae_sd]
+    error_df.to_csv(f"{rootpath}/data/results/base_model_errors.csv")
+
+    # save information on data availability (number of datapoints at which cooling tower was on for the specific season)
+    amount = len(lstm_df)
+    data_availability_df = pd.read_csv(
+        f"{rootpath}/data/results/data_amounts.csv", index_col="building-tower-season"
+    )
+    data_availability_df.loc[f"{building_name}{tower_number}_{season}"] = [
+        int(amount * multiplier) for multiplier in [1, 0.2, 0.4, 0.6, 0.8]
+    ]
+    data_availability_df.to_csv(f"{rootpath}/data/results/data_amounts.csv")
+
+    # GENERATE PLOTS
+
     # Create a new DataFrame with the desired 5-minute interval index, and merge the new DataFrame with the original DataFrame
     display_df = pd.DataFrame(
         index=pd.date_range(
@@ -142,11 +167,7 @@ def create_base_model(
         )
     ).merge(results_df, how="left", left_index=True, right_index=True)
 
-    mabs_error = mean_absolute_error(results_df["actual"], results_df["predicted"])
-    rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
-    print("Mean Absolute Error: %.3f" % mabs_error)
-    print("RMSE: %.3f" % rmse)
-
+    # display trend of temperature predictions (actual vs predicted)
     fig = px.line(display_df, x=display_df.index, y=["actual", "predicted"])
     fig.update_layout(
         title=f"{building_name} Tower {tower_number} LSTM Model Results",
@@ -154,12 +175,12 @@ def create_base_model(
         yaxis_title=target,
     )
     fig.show()
-
     fig.write_html(
         f"{rootpath}/plots/prepared_models/{building_name.lower()}_{season}_lstm.html"
     )
 
-    model.summary()
+    # save the model
+    print(model.summary())
     model.save(
         f"{rootpath}/models_saved/{building_name.lower()}{tower_number}_{season}_lstm/"
     )

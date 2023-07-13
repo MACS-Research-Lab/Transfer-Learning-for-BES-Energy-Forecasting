@@ -41,6 +41,7 @@ def feature_extr_transfer(
     finetune_epochs: int = 10,
     display_results: bool = True,
     use_delta: bool = True,
+    shuffle_seed: int = 42,
 ):
     # fix inputs
     if from_season == None and to_season != None:
@@ -95,7 +96,11 @@ def feature_extr_transfer(
     else:
         # split train and test set
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=(1 - finetuning_percentage), shuffle=False
+            X,
+            y,
+            test_size=(1 - finetuning_percentage),
+            shuffle=True,
+            random_state=shuffle_seed,
         )
 
         # scale feature data
@@ -106,38 +111,54 @@ def feature_extr_transfer(
 
         # create 3d vector form of data
         vec_X_train = model_prep.df_to_3d(
-            lstm_dtframe=X_train, num_columns=len(to_features) + 1, step_back=step_back
+            lstm_dtframe=X_train,
+            num_columns=len(to_features) + 1,
+            step_back=step_back,
         )
         vec_X_test = model_prep.df_to_3d(
-            lstm_dtframe=X_test, num_columns=len(to_features) + 1, step_back=step_back
+            lstm_dtframe=X_test,
+            num_columns=len(to_features) + 1,
+            step_back=step_back,
         )
 
         vec_y_train = y_train.values
         vec_y_test = y_test.values
 
-        print(
-            f"finetuning_percentage: {finetuning_percentage} vec_X_train.shape: {vec_X_train.shape}, vec_X_test.shape: {vec_X_test.shape}, vec_y_train.shape: {vec_y_train.shape}, vec_y_test.shape: {vec_y_test.shape}"
-        )
+        # if model finetuning has already been done, simply load the model
+        model_path = f"{rootpath}/models_saved/dense_ft/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_ft{finetuning_percentage}_seed{shuffle_seed}/"
 
-        # load and finetune model
-        model = keras.models.load_model(
-            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
-        )
+        if os.path.exists(model_path):
+            model = keras.models.load_model(model_path)
+            print(f"Pre-saved model for ft={finetuning_percentage} seed={shuffle_seed}")
 
-        # freeze lstm layer
-        model.layers[0].trainable = False
-        # dense layer to be finetuned
-        model.layers[1].trainable = False
+        # if model finetuning has not been done, finetune a base model
+        else:
+            # load and finetune model
+            model = keras.models.load_model(
+                f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
+            )
+            print(f"Finetuning for ft={finetuning_percentage} seed={shuffle_seed}")
 
-        model.compile(
-            optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
-            loss="mse",
-            metrics=[keras.metrics.BinaryAccuracy()],
-        )
+            # freeze lstm layer
+            model.layers[0].trainable = False
+            # dense layer to be finetuned
+            model.layers[1].trainable = False
 
-        history = model.fit(
-            vec_X_train, vec_y_train, epochs=finetune_epochs, verbose=0, shuffle=False
-        )
+            model.compile(
+                optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
+                loss="mse",
+                metrics=[keras.metrics.BinaryAccuracy()],
+            )
+
+            model.fit(
+                vec_X_train,
+                vec_y_train,
+                epochs=finetune_epochs,
+                verbose=0,
+                shuffle=False,
+            )
+
+            model.save(model_path)
 
     """
     3. Load model, finetune and predict
@@ -186,5 +207,6 @@ def feature_extr_transfer(
 
     if display_results:
         fig = display_transfer_results()
-
+    else:
+        fig = None
     return rmse, fig, mabs_error
