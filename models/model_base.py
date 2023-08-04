@@ -90,16 +90,24 @@ def create_base_model(
     """
     4. Create and Train model
     """
+    dropout_rate = 0.0
+    weight_constraint = keras.constraints.MaxNorm(2.0)
+    # lstmcells = ?
+    activation = "tanh"
+    optimizer = "Adamax"
+
     model = keras.models.Sequential()
     model.add(
         keras.layers.LSTM(
-            50,
+            32,
             input_shape=(vec_X_train.shape[1], vec_X_train.shape[2]),
-            bias_regularizer=keras.regularizers.L1(0.01),
+            kernel_constraint=weight_constraint,
+            recurrent_dropout=dropout_rate,
+            activation=activation,
         )
     )
-    model.add(keras.layers.Dense(1, kernel_regularizer=keras.regularizers.L1(0.01)))
-    model.compile(loss="mse", optimizer="adam")
+    model.add(keras.layers.Dense(1))
+    model.compile(loss="mse", optimizer=optimizer)
 
     history = model.fit(
         vec_X_train,
@@ -182,5 +190,5 @@ def create_base_model(
     # save the model
     print(model.summary())
     model.save(
-        f"{rootpath}/models_saved/{building_name.lower()}{tower_number}_{season}_lstm/"
+        f"{rootpath}/models_saved/base_models/{building_name.lower()}{tower_number}_{season}_lstm/"
     )

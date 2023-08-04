@@ -233,9 +233,20 @@ _Links and papers that could be useful :link:_
 
 ## **Week 7**
 
-- [ ] Mention data percentage
-- [ ] Random sampling, run 5 times with different random seeds and plot rmse + pir each time
-- [ ] Mention random seed
+**_:calendar: Monday, Jul 10_**
+
+- [x] Random sampling, run 5 times with different random seeds and plot rmse + pir each time
+- [x] Mention random seed
+
+**_:calendar: Tuesday, Jul 11_**
+
+- [x] Find standard deviation of prediction errors
+- [x] Reorganize results to compare transfer methods side-by-side
+
+**_:calendar: Tuesday, Jul 12_**
+
+- [x] Create grid for number of samples
+- [x] Write code to load pre-saved finetuned models for different seeds to save time
 
 Next steps?
 

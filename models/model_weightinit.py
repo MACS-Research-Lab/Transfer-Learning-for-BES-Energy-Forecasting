@@ -30,7 +30,7 @@ season_map = {
 }
 
 
-def weight_init_transfer(
+def weight_init_lstmdense_transfer(
     from_building_name: str,
     from_tower_number: int,
     to_building_name: str,
@@ -91,7 +91,7 @@ def weight_init_transfer(
 
         # load model
         model = keras.models.load_model(
-            f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
+            f"{rootpath}/models_saved/base_models/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
         )
 
     # if finetuning is required
@@ -123,7 +123,7 @@ def weight_init_transfer(
         vec_y_test = y_test.values
 
         # if model finetuning has already been done, simply load the model
-        model_path = f"{rootpath}/models_saved/lstmdense_ft/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_ft{finetuning_percentage}_seed{shuffle_seed}/"
+        model_path = f"{rootpath}/models_saved/lstmdense_ft/{from_building_name.lower()}{from_tower_number}{from_season}_to_{to_building_name.lower()}{to_tower_number}{to_season}_ft{int(finetuning_percentage*100)}_seed{shuffle_seed}/"
 
         if os.path.exists(model_path):
             model = keras.models.load_model(model_path)
@@ -132,10 +132,10 @@ def weight_init_transfer(
         # if model finetuning has not been done, finetune a base model
         else:
             # load and finetune model
-            base_model = keras.models.load_model(
-                f"../models_saved/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
-            )
             print(f"Finetuning for ft={finetuning_percentage} seed={shuffle_seed}")
+            base_model = keras.models.load_model(
+                f"{rootpath}/models_saved/base_models/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
+            )
             model = finetune(
                 model=base_model,
                 training_feature_vec=vec_X_train,
