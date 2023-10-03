@@ -259,3 +259,12 @@ Next steps?
 3. Predict 1 hour away
 4. Inter-season intra-building transfers between summer and fall
 5. Inter-season inter-building transfers between summer and fall
+
+**_:calendar: Week: 27 Sep 2023 - 3 Sep 2023_**
+
+- [x] Save base model training times
+- [ ] Save transfer training times
+- [ ] Reorganize code and save
+- [ ] Switch to using 2021-22 data and check inputs
+- [ ] Try GRU model
+- [ ] Try MLP model
