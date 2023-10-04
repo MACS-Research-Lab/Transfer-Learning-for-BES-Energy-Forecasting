@@ -197,19 +197,22 @@ def save_base_errors(
     mae_sd,
     training_time: None,
 ):
-    if model_type not in ["autoLSTM", "LD"]:
+    # the base model result may be needed to be stored for multiple transfers
+    if model_type == "LD":
+        model_types = ["weight_initialization_LSTMDense", "weight_initialization_Dense"]
+    elif model_type == "autoLSTM":
+        model_types = ["weight_initialization_AutoLSTM"]
+    elif model_type == "GRU":
+        model_types = ["weight_initialization_GRU"]
+    elif model_type == "autoGRU":
+        model_types = ["weight_initialization_AutoGRU"]
+    else:
         raise ValueError("Invalid model type")
 
+    # load results file
     result_filename = f"{rootpath}/results/result_data/transfer_results.json"
-
     with open(result_filename, "r") as f:
         data = json.load(f)
-
-    model_types = (
-        ["weight_initialization_LSTMDense", "weight_initialization_Dense"]
-        if model_type == "LD"
-        else ["weight_initialization_AutoLSTM"]
-    )
 
     for mt in model_types:
         # if that building doesn't exist
@@ -225,5 +228,6 @@ def save_base_errors(
             "training_time"
         ] = training_time
 
+    # update results file
     with open(result_filename, "w") as f:
         json.dump(data, f, indent=4)
