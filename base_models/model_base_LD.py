@@ -65,7 +65,7 @@ def create_base_model(
 
     # split into input and outputs
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=(1 - train_percentage), shuffle=False, random_state=shuffle_seed
+        X, y, test_size=(1 - train_percentage), shuffle=True, random_state=shuffle_seed
     )
 
     # scale feature data
