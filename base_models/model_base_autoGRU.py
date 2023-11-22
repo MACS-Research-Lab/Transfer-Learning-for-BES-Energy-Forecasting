@@ -36,7 +36,7 @@ def create_base_model(
     target: str,
     season: str = None,
     train_percentage: float = 0.75,
-    use_delta: bool = True,
+    use_delta: bool = False,
     shuffle_seed: int = 42,
 ):
     """

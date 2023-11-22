@@ -8,7 +8,10 @@ rootpath = ".."
 
 
 def choose_season(
-    dtframe: pd.DataFrame, season: str, season_col_name: str, verbose: bool = False
+    dtframe: pd.DataFrame,
+    season: str,
+    season_col_name: str = "Season",
+    verbose: bool = False,
 ):
     """
     Include only the data from a selected season.
@@ -137,7 +140,7 @@ def create_preprocessed_lstm_df(
     features: List[str],
     target: str,
     season: str = None,
-    use_delta: bool = True,
+    use_delta: bool = False,
     step_back: int = 6,
 ):
     """
@@ -145,23 +148,23 @@ def create_preprocessed_lstm_df(
     """
     # load data
     dtframe = pd.read_csv(
-        f"{rootpath}/data/{building_name.lower()}/{building_name.lower()}_tower_{tower_number}_preprocessed.csv",
+        f"{rootpath}/data/{building_name.lower()}/{building_name.lower()}{tower_number}_preprocessed.csv",
         index_col="time",
     )
     dtframe.index = pd.to_datetime(dtframe.index)
 
     # only take data for one season
     if season:
-        dtframe = choose_season(
-            dtframe,
-            season=season,
-            season_col_name=f"{building_name}_Tower_{tower_number} season",
-        )
+        dtframe = choose_season(dtframe, season=season)
     else:
         season = "allyear"
 
     # save a boolean series that specifies whether the cooling tower is on
-    on_condition = dtframe[f"{building_name}_Tower_{tower_number} fanStatus"]
+    on_condition = dtframe[target] > 0
+    print(
+        "number of times the hvac is on (energy consumption is > zero)",
+        on_condition.value_counts(),
+    )
 
     # select features and targets and create final dataframe that includes only relevant features and targets
     dtframe = dtframe[features].join(dtframe[target], on=dtframe.index)
@@ -174,17 +177,15 @@ def create_preprocessed_lstm_df(
     # remove cases where spring data would leak into summer data (i.e. intial timesteps)
     lstm_dtframe = remove_irrelevant_data(lstm_dtframe, on_condition, step_back)
 
-    # if difference from first temperature should be used as for predictions then return the first temperature
+    # if difference from first value should be used as for predictions then return the first value
     modified_target_name = f"{target}(t)"
-    first_temp = lstm_dtframe.iloc[
-        0, lstm_dtframe.columns.get_loc(modified_target_name)
-    ]
+    first_val = lstm_dtframe.iloc[0, lstm_dtframe.columns.get_loc(modified_target_name)]
     if use_delta:
         lstm_dtframe[modified_target_name] = (
-            lstm_dtframe[modified_target_name] - first_temp
+            lstm_dtframe[modified_target_name] - first_val
         )
 
-    return lstm_dtframe, first_temp
+    return lstm_dtframe, first_val
 
 
 def save_base_errors(
@@ -199,7 +200,7 @@ def save_base_errors(
 ):
     # the base model result may be needed to be stored for multiple transfers
     if model_type == "LD":
-        model_types = ["weight_initialization_LSTMDense", "weight_initialization_Dense"]
+        model_types = ["weight_initialization_LSTMDense"]
     elif model_type == "autoLSTM":
         model_types = ["weight_initialization_AutoLSTM"]
     elif model_type == "GRU":

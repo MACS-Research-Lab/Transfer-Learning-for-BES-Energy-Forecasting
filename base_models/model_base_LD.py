@@ -38,14 +38,14 @@ def create_base_model(
     season: str = None,
     plot_history: bool = False,
     train_percentage: float = 0.75,
-    use_delta: bool = True,
+    use_delta: bool = False,
     shuffle_seed: int = 42,
 ):
     """
     1. Convert data into a model-compatible shape
     """
 
-    lstm_df, first_temp = model_prep.create_preprocessed_lstm_df(
+    lstm_df, first_val = model_prep.create_preprocessed_lstm_df(
         building_name=building_name,
         tower_number=tower_number,
         features=features,
@@ -92,15 +92,17 @@ def create_base_model(
     4. Create and Train model
     """
     dropout_rate = 0.0
-    weight_constraint = keras.constraints.MaxNorm(2.0)
-    # lstmcells = ?
-    activation = "tanh"
-    optimizer = "Adamax"
+    weight_constraint = keras.constraints.MaxNorm(4.0)
+    batch_size = 32
+    epochs = 200
+    lstmcells = 64
+    activation = "relu"
+    optimizer = "Adam"
 
     model = keras.models.Sequential()
     model.add(
         keras.layers.LSTM(
-            32,
+            lstmcells,
             input_shape=(vec_X_train.shape[1], vec_X_train.shape[2]),
             kernel_constraint=weight_constraint,
             recurrent_dropout=dropout_rate,
@@ -114,8 +116,8 @@ def create_base_model(
     history = model.fit(
         vec_X_train,
         vec_y_train,
-        epochs=50,
-        batch_size=72,
+        epochs=epochs,
+        batch_size=batch_size,
         validation_data=(vec_X_test, vec_y_test),
         verbose=0,
         shuffle=False,
@@ -144,8 +146,8 @@ def create_base_model(
     )
 
     if use_delta:
-        results_df["actual"] = results_df["actual"] + first_temp
-        results_df["predicted"] = results_df["predicted"] + first_temp
+        results_df["actual"] = results_df["actual"] + first_val
+        results_df["predicted"] = results_df["predicted"] + first_val
 
     # SAVE ERROR AND DATA AVAILABILITY INFORMATION
 

@@ -36,14 +36,14 @@ def create_base_eld_model(
     target: str,
     season: str = None,
     train_percentage: float = 0.75,
-    use_delta: bool = True,
+    use_delta: bool = False,
     shuffle_seed: int = 42,
 ):
     """
     1. Convert data into a model-compatible shape
     """
 
-    lstm_df, first_temp = model_prep.create_preprocessed_lstm_df(
+    lstm_df, first_val = model_prep.create_preprocessed_lstm_df(
         building_name=building_name,
         tower_number=tower_number,
         features=features,
@@ -93,12 +93,14 @@ def create_base_eld_model(
     input_shape = (timesteps, input_dim)
 
     # selected hyperparameters
-    dropout_rate = 0.0
-    weight_constraint = keras.constraints.MaxNorm(7.0)
-    # lstmcells = ?
-    activation = "linear"
     neurons = 128
-    optimizer = "Adagrad"
+    dropout_rate = 0.0
+    weight_constraint = keras.constraints.MaxNorm(4.0)
+    batch_size = 32
+    epochs = 200
+    lstmcells = 64
+    activation = "relu"
+    optimizer = "Adam"
 
     # Define the autoencoder architecture using model.add()
     model = keras.models.Sequential()
@@ -116,7 +118,7 @@ def create_base_eld_model(
     # LSTM bottleneck layer
     model.add(
         keras.layers.LSTM(
-            units=32,
+            units=lstmcells,
             activation=activation,
             recurrent_dropout=dropout_rate,
             kernel_constraint=weight_constraint,
@@ -143,8 +145,8 @@ def create_base_eld_model(
     history = model.fit(
         vec_X_train,
         vec_y_train,
-        epochs=50,
-        batch_size=72,
+        epochs=epochs,
+        batch_size=batch_size,
         validation_data=(vec_X_test, vec_y_test),
         verbose=0,
         shuffle=False,
@@ -167,8 +169,8 @@ def create_base_eld_model(
     )
 
     if use_delta:
-        results_df["actual"] = results_df["actual"] + first_temp
-        results_df["predicted"] = results_df["predicted"] + first_temp
+        results_df["actual"] = results_df["actual"] + first_val
+        results_df["predicted"] = results_df["predicted"] + first_val
 
     # SAVE ERROR AND DATA AVAILABILITY INFORMATION
 

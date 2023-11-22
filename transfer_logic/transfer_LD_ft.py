@@ -41,7 +41,7 @@ def transfer_LD_dense(
     finetuning_percentage: float = 0,
     finetune_epochs: int = 10,
     display_results: bool = True,
-    use_delta: bool = True,
+    use_delta: bool = False,
     shuffle_seed: int = 42,
 ):
     # fix inputs
@@ -53,7 +53,7 @@ def transfer_LD_dense(
     1. Load data and do LSTM preprocessing
     """
 
-    lstm_to_df, to_first_temp = model_prep.create_preprocessed_lstm_df(
+    lstm_to_df, to_first_val = model_prep.create_preprocessed_lstm_df(
         building_name=to_building_name,
         tower_number=to_tower_number,
         features=to_features,
@@ -63,8 +63,6 @@ def transfer_LD_dense(
     )
     if not to_season:
         to_season = from_season = "allyear"
-
-    print(f"Tower {to_tower_number} first temp: {to_first_temp}")
 
     """
     2. Convert tower data into a model-compatible shape i.e. get timestepped data as a 3D vector
@@ -184,8 +182,8 @@ def transfer_LD_dense(
     )
 
     if use_delta:
-        results_df["actual"] = results_df["actual"] + to_first_temp
-        results_df["predicted"] = results_df["predicted"] + to_first_temp
+        results_df["actual"] = results_df["actual"] + to_first_val
+        results_df["predicted"] = results_df["predicted"] + to_first_val
 
     rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
     mabs_error = mean_absolute_error(results_df["actual"], results_df["predicted"])
