@@ -41,7 +41,7 @@ def transfer_LD_weightinit(
     to_season: str = None,
     from_season: str = None,
     finetuning_percentage: float = 0,
-    finetune_epochs: int = 10,
+    finetune_epochs: int = 100,
     display_results: bool = True,
     use_delta: bool = False,
     shuffle_seed: int = 42,
@@ -64,7 +64,7 @@ def transfer_LD_weightinit(
     )
     if not to_season:
         to_season = from_season = "allyear"
-    training_time = 0
+    training_time = -1
 
     """
     2. Convert tower data into a model-compatible shape i.e. get timestepped data as a 3D vector

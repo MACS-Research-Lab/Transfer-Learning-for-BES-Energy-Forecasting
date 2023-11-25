@@ -39,7 +39,7 @@ def transfer_LD_dense(
     to_season: str = None,
     from_season: str = None,
     finetuning_percentage: float = 0,
-    finetune_epochs: int = 10,
+    finetune_epochs: int = 100,
     display_results: bool = True,
     use_delta: bool = False,
     shuffle_seed: int = 42,
