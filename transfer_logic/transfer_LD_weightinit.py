@@ -17,6 +17,7 @@ import keras
 
 rootpath = ".."
 sys.path.insert(0, f"{os.getcwd()}/{rootpath}/base_models")
+sys.path.insert(0, f"{os.getcwd()}/{rootpath}/source_models")
 warnings.filterwarnings("ignore")
 
 import model_prep
@@ -133,12 +134,12 @@ def transfer_LD_weightinit(
         else:
             # load and finetune model
             print(f"Finetuning for ft={finetuning_percentage} seed={shuffle_seed}")
-            base_model = keras.models.load_model(
-                f"{rootpath}/results/models_saved/base_models/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
+            model = keras.models.load_model(
+                f"{rootpath}/results/models_saved/source_models/{from_building_name.lower()}{from_tower_number}_{from_season}_lstm/"
             )
             start_time = time.time()
             model = finetune(
-                model=base_model,
+                model=model,
                 training_feature_vec=vec_X_train,
                 training_target_vec=vec_y_train,
                 epochs=finetune_epochs,

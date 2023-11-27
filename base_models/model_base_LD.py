@@ -40,6 +40,7 @@ def create_base_model(
     train_percentage: float = 0.75,
     use_delta: bool = False,
     shuffle_seed: int = 42,
+    is_source: bool = False,
 ):
     """
     1. Convert data into a model-compatible shape
@@ -94,7 +95,7 @@ def create_base_model(
     dropout_rate = 0.0
     weight_constraint = keras.constraints.MaxNorm(4.0)
     batch_size = 32
-    epochs = 200
+    epochs = 100 if is_source else 200
     lstmcells = 64
     activation = "relu"
     optimizer = "Adam"
@@ -137,62 +138,71 @@ def create_base_model(
     """
     5. Display results
     """
-    results_df = pd.DataFrame(
-        {
-            "actual": vec_y_test.reshape((vec_y_test.shape[0])),
-            "predicted": yhat.reshape((yhat.shape[0])),
-        },
-        index=y_test.index,
-    )
-
-    if use_delta:
-        results_df["actual"] = results_df["actual"] + first_val
-        results_df["predicted"] = results_df["predicted"] + first_val
-
-    # SAVE ERROR AND DATA AVAILABILITY INFORMATION
-
-    # calculate, display and save error results
-    mae = mean_absolute_error(results_df["actual"], results_df["predicted"])
-    rmse = np.sqrt(mean_squared_error(results_df["actual"], results_df["predicted"]))
-    mae_sd = np.std(np.abs(results_df["actual"] - results_df["predicted"]))
-    model_prep.save_base_errors(
-        "LD", building_name, tower_number, season, rmse, mae, mae_sd, training_time
-    )
-
-    # save information on data availability (number of datapoints at which cooling tower was on for the specific season)
-    amount = len(lstm_df)
-    data_availability_df = pd.read_csv(
-        f"{rootpath}/results/result_data/data_amounts.csv",
-        index_col="building-tower-season",
-    )
-    data_availability_df.loc[f"{building_name}{tower_number}_{season}"] = [
-        int(amount * multiplier) for multiplier in [1, 0.2, 0.4, 0.6, 0.8]
-    ]
-    data_availability_df.to_csv(f"{rootpath}/results/result_data/data_amounts.csv")
-
-    # GENERATE PLOTS
-
-    # Create a new DataFrame with the desired 5-minute interval index, and merge the new DataFrame with the original DataFrame
-    display_df = pd.DataFrame(
-        index=pd.date_range(
-            start=results_df.index.min(), end=results_df.index.max(), freq="5min"
+    # if the model is a source model for a transfer, then it is trained at a different level of epochs so should be saved at a different place
+    if is_source:
+        model.save(
+            f"{rootpath}/results/models_saved/source_models/{building_name.lower()}{tower_number}_{season}_lstm/"
         )
-    ).merge(results_df, how="left", left_index=True, right_index=True)
 
-    # display trend of temperature predictions (actual vs predicted)
-    fig = px.line(display_df, x=display_df.index, y=["actual", "predicted"])
-    fig.update_layout(
-        title=f"{building_name} Tower {tower_number} LSTM Model Results",
-        xaxis_title="time",
-        yaxis_title=target,
-    )
-    fig.show()
-    fig.write_html(
-        f"{rootpath}/results/plots/prepared_models/{building_name.lower()}_{season}_lstm.html"
-    )
+    else:
+        results_df = pd.DataFrame(
+            {
+                "actual": vec_y_test.reshape((vec_y_test.shape[0])),
+                "predicted": yhat.reshape((yhat.shape[0])),
+            },
+            index=y_test.index,
+        )
 
-    # save the model
-    print(model.summary())
-    model.save(
-        f"{rootpath}/results/models_saved/base_models/{building_name.lower()}{tower_number}_{season}_lstm/"
-    )
+        if use_delta:
+            results_df["actual"] = results_df["actual"] + first_val
+            results_df["predicted"] = results_df["predicted"] + first_val
+
+        # SAVE ERROR AND DATA AVAILABILITY INFORMATION
+
+        # calculate, display and save error results
+        mae = mean_absolute_error(results_df["actual"], results_df["predicted"])
+        rmse = np.sqrt(
+            mean_squared_error(results_df["actual"], results_df["predicted"])
+        )
+        mae_sd = np.std(np.abs(results_df["actual"] - results_df["predicted"]))
+        model_prep.save_base_errors(
+            "LD", building_name, tower_number, season, rmse, mae, mae_sd, training_time
+        )
+
+        # save information on data availability (number of datapoints at which cooling tower was on for the specific season)
+        amount = len(lstm_df)
+        data_availability_df = pd.read_csv(
+            f"{rootpath}/results/result_data/data_amounts.csv",
+            index_col="building-tower-season",
+        )
+        data_availability_df.loc[f"{building_name}{tower_number}_{season}"] = [
+            int(amount * multiplier) for multiplier in [1, 0.2, 0.4, 0.6, 0.8]
+        ]
+        data_availability_df.to_csv(f"{rootpath}/results/result_data/data_amounts.csv")
+
+        # GENERATE PLOTS
+
+        # Create a new DataFrame with the desired 5-minute interval index, and merge the new DataFrame with the original DataFrame
+        display_df = pd.DataFrame(
+            index=pd.date_range(
+                start=results_df.index.min(), end=results_df.index.max(), freq="5min"
+            )
+        ).merge(results_df, how="left", left_index=True, right_index=True)
+
+        # display trend of temperature predictions (actual vs predicted)
+        fig = px.line(display_df, x=display_df.index, y=["actual", "predicted"])
+        fig.update_layout(
+            title=f"{building_name} Tower {tower_number} LSTM Model Results",
+            xaxis_title="time",
+            yaxis_title=target,
+        )
+        fig.show()
+        fig.write_html(
+            f"{rootpath}/results/plots/prepared_models/{building_name.lower()}_{season}_lstm.html"
+        )
+
+        # save the model
+        print(model.summary())
+        model.save(
+            f"{rootpath}/results/models_saved/base_models/{building_name.lower()}{tower_number}_{season}_lstm/"
+        )
