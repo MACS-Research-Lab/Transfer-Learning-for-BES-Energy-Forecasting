@@ -203,10 +203,8 @@ def save_base_errors(
         model_types = ["weight_initialization_LSTMDense"]
     elif model_type == "autoLSTM":
         model_types = ["weight_initialization_AutoLSTM"]
-    elif model_type == "GRU":
-        model_types = ["weight_initialization_GRU"]
-    elif model_type == "autoGRU":
-        model_types = ["weight_initialization_AutoGRU"]
+    elif model_type == "adjustedMLP":
+        model_types = ["weight_initialization_AdjMLP"]
     else:
         raise ValueError("Invalid model type")
 
