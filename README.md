@@ -17,10 +17,10 @@ $ pip install -r requirements.txt
 ```
 
 1. Generate base models by running through create*base*{autoLSTM, LD, MLP}.ipynb for the cases you wish to observe
-2. Following the logic in `experiments/model_comparison.ipynb`, run through the code for the specific case to generate transfer results that populate `transfer_results.json`
-3. To train and test all cases of transfers between building, run through `experiments/model_comparison.ipynb` to populate `transfer_results.json` (note that this is a slow process). Then run through `experiments/result_displays.ipynb` to generate comparative plots.
+2. Following the logic in [`experiments/model_comparison.ipynb`](./experiments/model_comparison.ipynb), run through the code for the specific case to generate transfer results that populate [`transfer_results.json`](./results/result_data/transfer_results.json)
+3. To train and test all cases of transfers between building, run through [`experiments/model_comparison.ipynb`](./experiments/model_comparison.ipynb) to populate `transfer_results.json` (note that this is a slow process). Then run through [`transfer_results.json`](./results/result_data/transfer_results.json) to generate comparative plots.
 
-Methods 1, 2, and 3 from the paper are benchmarked in this manner. R-DANN methodology was run separately and included in this repository under the `dann-transfer` subfolder.
+Methods 1, 2, and 3 from the paper are benchmarked in this manner. R-DANN methodology was run separately and included in this repository under the [`r-dann`](./r-dann/) subfolder.
 
 ### **:open_file_folder: Directory Structure**:
 
