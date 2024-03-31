@@ -1,12 +1,8 @@
 # additions
-models_saved/
-data/
 temp/
 *temp*.*
 *tmp*.*
-data_descriptions.txt
 .empty/
-models/*winter*.ipynb
 plots/
 preprocessing/bdx_config.py
 preprocessing/data_collection.py

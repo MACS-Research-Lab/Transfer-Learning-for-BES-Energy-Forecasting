@@ -144,7 +144,8 @@ def create_preprocessed_lstm_df(
     step_back: int = 6,
 ):
     """
-    1. Load data and do LSTM preprocessing
+    Load data and perform LSTM preprocessing
+    Return a dataframe (not a 3D array)
     """
     # load data
     dtframe = pd.read_csv(
@@ -198,6 +199,9 @@ def save_base_errors(
     mae_sd,
     training_time: None,
 ):
+    """
+    Save values of base model errors for benchmarking
+    """
     # the base model result may be needed to be stored for multiple transfers
     if model_type == "LD":
         model_types = ["weight_initialization_LSTMDense"]

@@ -1,0 +1,8 @@
+keras==2.10.0
+matplotlib==3.7.1
+numpy==1.24.3
+pandas==1.5.3
+plotly==5.15.0
+scikit_learn==1.2.2
+scipy==1.10.0
+torch==2.1.0

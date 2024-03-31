@@ -1,44 +1,59 @@
-# HVAC Model Problem for MACS
+# Comparison of Transfer Learning Techniques for Building Energy Forecasting
 
-- **Spring 2023 Works:** [ESB Tower 1 Time-Series Model for Cooling Tower Efficiency](./archive/) made using sklearn (later added a model made using LSTM with keras in the summer)
-- **Summer 2023 Works:** Transfer learning model for energy performance analysis
-  <br/>
+<i>Das Sharma, S., Coursey, A., Quinones-Grueiro, M., & Biswas, G.</br>
+Department of Computer Science, Vanderbilt University, TN, USA</br>
+12th IFAC Symposium on Fault Detection, Supervision and Safety for Technical Processes</i>
 
-# Transfer learning of data-driven models for energy performance analysis
+### **:pencil2: Abstract**:
 
-### **:pushpin: Objectives**:
+The growing demand for building energy efficiency necessitates accurate predictions of normal versus abnormal operations to understand their impact on energy management. However, integrating predictive models into practical applications faces challenges, especially in buildings with limited measurements and data. This paper explores the viability of three widely adopted transfer learning techniques in improving energy consumption models, focusing on real-world data with internal building measurements. The findings suggest that transferring information between buildings is a promising method to provide positive improvements in energy prediction models.
 
-- Use data-driven tools to analyze the building operating modes and factors affecting energy consumption.
-- Analyze the influence of training data amount availability and quality on prediction performance.
-- Benchmark transfer learning mechanisms for cross-building data-driven short-term energy predictions.
+### **:computer: Setup**:
 
-### **:pushpin: Project tasks**:
+To install required packages, run:
 
-**Week 1-2**
+```
+$ pip install -r requirements.txt
+```
 
-- [ ] Collect and curate/organize the data for two/more buildings (ESB, Kissam, MRB)
+Run through `experiments/model_comparison.ipynb` to train and test all models to populate `transfer_results.json` (note that this is a slow process). Then run through `experiments/result_displays.ipynb` to generate comparative plots. Methods 1, 2, and 3 from the paper are benchmarked in this manner.
 
-**Week 3**
+R-DANN methodology was run separately and included in this repository under the `dann-transfer` subfolder.
 
-- [ ] Collect and organize weather data corresponding to the same date interval.
+### **:open_file_folder: Directory Structure**:
 
-**Week 4**
-
-- [ ] Derive common variables available across buildings
-
-**Week 4-6**
-
-- [ ] Conduct exploratory data analysis and data processing through visualization, outlier removal, missing data imputation, and clustering, to determine operating modes that affect the energy consumption. Analyze common modes of operation based on weather conditions.
-
-**Week 7**
-
-- [ ] Train/Validate a set of data-driven predictive energy models for each building with complete datasets
-
-**Week 8**
-
-- [ ] Analyze the influence of training data amount availability and quality on prediction performance for each model.<br/>
-- [ ] Select transfer learning mechanisms to be tested.
-
-**Week 9-10**
-
-- [ ] Benchmark/compare the effectiveness of transfer learning mechanisms to reduce the amount/quality of data required
+```
+.
+├── README.md
+│
+├── base_models
+│ ├── model_base_{autoLSTM, LD, MLP}.py: : Model architecture and generation functions
+│ ├── create_base_{autoLSTM, LD, MLP}.ipynb: Jupyter Notebooks to call the model generation functions
+│
+├── experiments
+│ ├── model_comparison.ipynb: Calls relevant methods in the repo to generate all models and populates transfer_results.json with relevant details for benchmarking
+│ └── result_displays.ipynb: Utilizes populated transfer_results.json to generate visualizations
+│
+├── helper
+│ ├── grid_search.ipynb
+│ └── mlp_grid_search.ipynb
+│
+├── preprocessing
+│ ├── esb_preprocessing.ipynb
+│ ├── kissam_preprocessing.ipynb
+│ └── preprocessor.py
+│
+├── requirements.txt
+│
+├── results
+│ └── result_data
+│ ├── alt_transfer_results.json
+│ ├── data_amounts.csv
+│ └── transfer_results.json
+│
+└── transfer_logic
+├── adjustedtransfer_runthrough.ipynb
+├── transfer_LD_weightinit.py
+├── transfer_adjusted.py
+└── transfer_autoLSTM.py
+```
